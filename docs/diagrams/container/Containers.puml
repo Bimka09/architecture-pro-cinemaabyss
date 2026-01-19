@@ -1,0 +1,100 @@
+@startuml
+
+!include <C4/C4_Container>
+
+title System Container Diagram - Cinema Abyss
+
+Person(user, "User", "User who wants to watch cinema")
+
+'Main system
+System_Boundary(cinemaAbyssSys, "Cinema Abyss"){
+
+    Container(webApp, "Web App", "", "Browser-based web client")
+    Container(bffWebApp, "Web BFF", "", "Backend-for-Frontend providing optimized APIs for Web Application")
+
+    Container(mobileApp, "Mobile App", "", "Mobile client (iOS/Android)")
+    Container(bffMobileApp, "Mobile BFF", "" , "Backend-for-Frontend providing optimized APIs for Mobile Application")
+
+    Container(smartTVApp, "SmartTV App", "", "Smart TV client")
+    Container(bffSmartTVApp, "Smart TV BFF", "", "Backend-for-Frontend providing optimized APIs for Smart TV Application")
+
+    Container(idp, "Identity Provider", "Authenticates users and issues access tokens. Supports email/password login and external SSO via OAuth2/OIDC")
+    Container(reverseProxy, "Reverse Proxy", "", "Single entry point routing requests to internal services, handling TLS and rate limiting. No business logic")
+
+    Container(paymentsWebApi, "Payments Service", "", "Handles payment operations and integration with external payment provider")
+    ContainerDb(paymentsDb, "Payments Db", "PostgreSQL", "Stores payment transactions and payment history")
+
+    Container(usersWebApi, "Users Service", "", "Manages user profiles and other related data")
+    ContainerDb(usersDb, "Users Db", "PostgreSQL", "Stores user profiles and account data")
+
+    Container(subscriptionsWebApi, "Subscriptions Service", "", "Manages user subscriptions, plans and access rights")
+    ContainerDb(subscriptionsDb, "Subscriptions Db", "PostgreSQL", "Stores subscription plans and user subscriptions")
+
+    Container(usersLoyaltyWebApi, "Loyalty Service", "", "Manages discounts, promotions and loyalty programs")
+    ContainerDb(usersLoyaltyDb, "Loyalty Db", "PostgreSQL", "Stores discounts, promotions and loyalty rules")
+
+    Container(cinemaStreamWebApi, "Streaming Service", "", "Provides movie playback and streaming URLs")
+
+    Container(cinemaMetadataWebApi, "Metadata Service", "Manages movie metadata such as genres, actors and ratings")
+    ContainerDb(cinemaMetadataDb, "Metadata Db", "PostgreSQL", "Stores movie metadata")
+    ContainerDb(cinemaMediaDb, "Media Storage","S3", "Stores posters, previews and media assets")
+
+    Container(eventsService, "Events Service", "", "Provides event-based communication between services")
+    ContainerQueue_Ext(kafka, "Kafka Cluster", "Distributed event streaming platform")
+}
+
+' Externals
+System_Boundary(recommendationSysExt, "Recommendation System"){
+    ContainerQueue_Ext(eventBus, "Message broker", "RabbitMQ")
+}
+System_Ext(paymentsSys, "Payment System", "Third-party payment provider")
+System_Ext(cinemaPartners, "Online Cinema partners", "External partners providing video content")
+System_Ext(googleSSO, "Google Identity", "External OAuth2 / OIDC provider")
+
+' Relations
+Rel(user, webApp, "Uses via browser")
+Rel(user, mobileApp, "Uses via mobile device")
+Rel(user, smartTVApp, "Uses via TV")
+
+Rel(webApp, bffWebApp, "HTTPS")
+Rel(mobileApp, bffMobileApp, "HTTPS")
+Rel(smartTVApp, bffSmartTVApp, "HTTPS")
+
+Rel(webApp, idp, "User registration & login (email/password)", "HTTPS")
+Rel(mobileApp, idp, "User registration & login (email/password)", "HTTPS")
+Rel(smartTVApp, idp, "User registration & login (email/password)", "HTTPS")
+Rel(webApp, idp, "Initiates SSO login flow")
+Rel(mobileApp, idp, "Initiates SSO login flow")
+Rel(smartTVApp, idp, "Initiates SSO login flow")
+Rel(idp, googleSSO, "Delegates authentication", "OAuth2 / OIDC")
+
+Rel(bffWebApp, reverseProxy, "Calls backend APIs")
+Rel(bffMobileApp, reverseProxy, "Calls backend APIs")
+Rel(bffSmartTVApp, reverseProxy, "Calls backend APIs")
+
+Rel(reverseProxy, idp, "Validates JWT using public keys (JWKS)")
+Rel(reverseProxy, cinemaStreamWebApi, "Routes requests", "HTTP")
+Rel(reverseProxy, paymentsWebApi, "Routes requests", "HTTP")
+Rel(reverseProxy, usersWebApi, "Routes requests", "HTTP")
+Rel(reverseProxy, usersLoyaltyWebApi, "Routes requests", "HTTP")
+Rel(reverseProxy, subscriptionsWebApi, "Routes requests", "HTTP")
+Rel(reverseProxy, cinemaMetadataWebApi, "Routes requests", "HTTP")
+
+Rel(cinemaStreamWebApi, cinemaPartners, "Streams content")
+Rel(paymentsWebApi, eventsService, "Publishes domain events")
+Rel(paymentsWebApi, paymentsDb, "Reads/Writes")
+Rel(paymentsWebApi, paymentsSys, "Processes payments", "HTTPS")
+Rel(usersWebApi, eventsService, "Publishes domain events")
+Rel(usersWebApi, usersDb, "Reads/Writes")
+Rel(usersLoyaltyWebApi, usersLoyaltyDb, "Reads/Writes")
+Rel(subscriptionsWebApi, eventsService, "Publishes domain events")
+Rel(subscriptionsWebApi, subscriptionsDb, "Reads/Writes")
+Rel(cinemaMetadataWebApi, cinemaPartners, "Fetches metadata")
+Rel(cinemaMetadataWebApi, cinemaMetadataDb, "Reads/Writes")
+Rel(cinemaMetadataWebApi, cinemaMediaDb, "Reads/Writes")
+Rel(eventsService, kafka, "Publishes/Consumes events", "Kafka protocol")
+Rel(eventsService, subscriptionsWebApi, "Delivers payment events")
+Rel(eventsService, usersLoyaltyWebApi, "Delivers payment events")
+Rel(kafka, eventBus, "User cinema ratings updates")
+
+@enduml

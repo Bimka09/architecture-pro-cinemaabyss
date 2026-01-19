@@ -1,0 +1,23 @@
+@startuml
+
+!include <C4/C4_Context>
+
+title System Context Diagram - Cinema Abyss
+
+Person(user, "User", "User who whants to watch cinema")
+
+' Main
+System(cinemaSys, "Cinema Abyss", "Online cinema platform for watching movies, managing subscriptions and payments")
+
+' External systems
+System_Ext(recommendationSysExt, "Recommendation System", "Provides personalized movie recommendations")
+System_Ext(paymentsSys, "Payment System", "Processes user payments")
+System_Ext(cinemaPartners, "Online Cinema partners", "Provide video content")
+
+Rel(user, cinemaSys, "Uses")
+
+Rel(cinemaSys, recommendationSysExt, "Sends events / gets recommendations")
+Rel(cinemaSys, paymentsSys, "Processes payments")
+Rel(cinemaSys, cinemaPartners, "Streams / gets content")
+
+@enduml
