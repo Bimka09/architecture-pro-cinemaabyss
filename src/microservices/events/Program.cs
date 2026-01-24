@@ -13,13 +13,6 @@ app.UseSwagger();
 app.UseSwaggerUI();
 app.MapControllers();
 
-app.MapGet("/api/events/health", () =>
-{
-    return new { status = true };
-})
-.WithTags("Health");
-
-
 app.Run();
 
 

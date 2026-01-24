@@ -3,12 +3,23 @@ using KafkaProducerConsumer.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KafkaProducerConsumer;
+public  class HealthRes
+{
+    public bool status {  get; set; }
+}
 
 [ApiController]
 [Route("api/events")]
 public class EventsController(KafkaProducer producer, IConfiguration configuration) : ControllerBase
 {
     private readonly KafkaProducer _producer = producer;
+
+    [HttpGet("health")]
+    public async Task<IActionResult> Health()
+    {
+        return Ok(new HealthRes { status = true });
+    }
+
 
     [HttpPost("user")]
     public async Task<IActionResult> CreateUserEvent([FromBody] UserEvent userEvent)
