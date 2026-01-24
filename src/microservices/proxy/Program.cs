@@ -73,6 +73,29 @@ app.Map("/api/events/{*subPath}", async (HttpContext context,
 .WithName("events")
 .WithOpenApi();
 
+// ----------------- Payments proxy -----------------
+
+app.Map("/api/payments/{*subPath}", async (HttpContext context,
+                                           IConfiguration configuration,
+                                           IHttpClientFactory httpClientFactory) =>
+{
+    var pathAndQuery = context.Request.Path + context.Request.QueryString;
+    var targetUrl = $"{configuration["MONOLITH_URL"]}{pathAndQuery}";
+    await ProxyRequest(httpClientFactory, context, targetUrl);
+});
+
+// ----------------- Subscriptions proxy -----------------
+
+app.Map("/api/subscriptions/{*subPath}", async (HttpContext context,
+                                               IConfiguration configuration,
+                                               IHttpClientFactory httpClientFactory) =>
+{
+    var pathAndQuery = context.Request.Path + context.Request.QueryString;
+    var targetUrl = $"{configuration["MONOLITH_URL"]}{pathAndQuery}";
+    await ProxyRequest(httpClientFactory, context, targetUrl);
+});
+
+
 
 
 app.Run();
