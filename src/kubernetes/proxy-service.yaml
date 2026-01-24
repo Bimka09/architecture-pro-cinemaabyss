@@ -28,7 +28,7 @@ spec:
         - containerPort: 8000
         env:
         - name: ASPNETCORE_HTTP_PORTS
-          value: "8082"
+          value: "8000"
         - name: MONOLITH_URL
           value: "http://monolith:8080"
         - name: MOVIES_SERVICE_URL

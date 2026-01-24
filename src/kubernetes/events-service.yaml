@@ -27,6 +27,8 @@ spec:
         ports:
         - containerPort: 8082
         env:
+        - name: ASPNETCORE_HTTP_PORTS
+          value: "8082"
         - name: KAFKA_BROKERS
           value: "kafka:9092"
         - name:  MOVIE_TOPIC
