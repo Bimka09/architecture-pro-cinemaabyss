@@ -25,12 +25,10 @@ jobs:
         run: |
           docker compose up -d --build
 
-      - name: Wait for services to be healthy
+      - name: Debug events-service health
         run: |
-          echo "Waiting for events-service..."
-          until [ "$(docker inspect -f '{{.State.Health.Status}}' cinemaabyss-events-service)" = "healthy" ]; do
-            sleep 5
-          done
+          docker inspect cinemaabyss-events-service --format='{{.State.Health}}'
+          docker logs cinemaabyss-events-service
 
       - name: Build API test image
         working-directory: tests/postman
