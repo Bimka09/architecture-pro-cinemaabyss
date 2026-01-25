@@ -1,7 +1,4 @@
 ﻿using Confluent.Kafka;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 public class KafkaConsumer : BackgroundService
 {
@@ -16,36 +13,41 @@ public class KafkaConsumer : BackgroundService
         _logger = logger;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        // запуск в фоне
+        _ = Task.Run(async () =>
+        {
+            await RunConsumerLoop(stoppingToken);
+        }, stoppingToken);
+
+        // сразу возвращаем Task, чтобы не блокировать старт
+        return Task.CompletedTask;
+    }
+
+    private async Task RunConsumerLoop(CancellationToken stoppingToken)
     {
         var topics = new[]
         {
-            _configuration["MOVIE_TOPIC"],
-            _configuration["USER_TOPIC"],
-            _configuration["PAYMENT_TOPIC"]
-        };
+        _configuration["MOVIE_TOPIC"],
+        _configuration["USER_TOPIC"],
+        _configuration["PAYMENT_TOPIC"]
+    };
 
         var bootstrapServers = _configuration["KAFKA_BROKERS"];
 
-        // 🔁 основной retry loop
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                // 1️⃣ ждём, пока топики появятся
-                await WaitForTopicsAsync(
-                    topics,
-                    bootstrapServers,
-                    stoppingToken);
+                await WaitForTopicsAsync(topics, bootstrapServers, stoppingToken);
 
-                // 2️⃣ создаём consumer
                 var consumerConfig = new ConsumerConfig
                 {
                     BootstrapServers = bootstrapServers,
                     GroupId = "events-service",
                     ClientId = "events-service-consumer",
                     AutoOffsetReset = AutoOffsetReset.Earliest,
-
                     EnableAutoCommit = true,
                     SessionTimeoutMs = 10_000,
                     SocketTimeoutMs = 10_000,
@@ -55,60 +57,40 @@ public class KafkaConsumer : BackgroundService
 
                 using var consumer = new ConsumerBuilder<Ignore, string>(consumerConfig)
                     .SetErrorHandler((_, e) =>
-                    {
-                        _logger.LogWarning("Kafka error: {Reason}", e.Reason);
-                    })
+                        _logger.LogWarning("Kafka error: {Reason}", e.Reason))
                     .Build();
 
                 consumer.Subscribe(topics);
+                _logger.LogInformation("Kafka consumer started. Topics: {Topics}", string.Join(", ", topics));
 
-                _logger.LogInformation(
-                    "Kafka consumer started. Topics: {Topics}",
-                    string.Join(", ", topics));
-
-                // 3️⃣ consume loop
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     try
                     {
                         var result = consumer.Consume(stoppingToken);
-
                         if (result?.Message != null)
-                        {
-                            _logger.LogInformation(
-                                "[Kafka] {Topic}: {Message}",
-                                result.Topic,
-                                result.Message.Value);
-                        }
+                            _logger.LogInformation("[Kafka] {Topic}: {Message}", result.Topic, result.Message.Value);
                     }
                     catch (ConsumeException ex)
                     {
-                        _logger.LogWarning(
-                            ex,
-                            "Consume error ({Code})",
-                            ex.Error.Code);
-
-                        // Unknown topic / partition → выходим и ждём
+                        _logger.LogWarning(ex, "Consume error ({Code})", ex.Error.Code);
                         if (ex.Error.Code == ErrorCode.UnknownTopicOrPart)
                             break;
                     }
                 }
             }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
+            catch (OperationCanceledException) { break; }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Kafka consumer crashed, retrying...");
             }
 
-            // ⏳ пауза перед следующей попыткой
             await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
         }
 
         _logger.LogInformation("Kafka consumer stopped");
     }
+
 
     // 🔎 ожидание появления топиков
     private async Task WaitForTopicsAsync(

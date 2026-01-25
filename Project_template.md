@@ -188,38 +188,10 @@ cat .docker/config.json | base64
   3. Разверните базу данных:
   ```bash
   kubectl apply -f src/kubernetes/postgres.yaml
-  ```
-
-  На этом этапе если вызвать команду
-  ```bash
-  kubectl -n cinemaabyss get pod
-  ```
-  Вы увидите
-
-  NAME         READY   STATUS    
-  postgres-0   1/1     Running   
-
-  4. Разверните Kafka:
-  ```bash
   kubectl apply -f src/kubernetes/kafka/kafka.yaml
-  ```
-
-  Проверьте, теперь должно быть запущено 3 пода, если что-то не так, то посмотрите логи
-  ```bash
-  kubectl -n cinemaabyss logs имя_пода (например - kafka-0)
-  ```
-
-  5. Разверните монолит:
-  ```bash
   kubectl apply -f src/kubernetes/monolith.yaml
-  ```
-  6. Разверните микросервисы:
-  ```bash
   kubectl apply -f src/kubernetes/movies-service.yaml
   kubectl apply -f src/kubernetes/events-service.yaml
-  ```
-  7. Разверните прокси-сервис:
-  ```bash
   kubectl apply -f src/kubernetes/proxy-service.yaml
   ```
 
@@ -273,8 +245,15 @@ cat .docker/config.json | base64
   Часть тестов с health-чек упадет, но создание событий отработает.
   Откройте логи event-service и сделайте скриншот обработки событий
 
+[Kuber_EventsTests](/Kuber_EventsTests.png)
+[Kuber_EventsTestsConsumer](/Kuber_EventsTestsConsumer.png)
+
 #### Шаг 3
 Добавьте сюда скриншота вывода при вызове https://cinemaabyss.example.com/api/movies и  скриншот вывода event-service после вызова тестов.
+
+[Kuber_Movies](/Kuber_Movies.png)
+[Kuber_EventsTestsConsumer](/Kuber_EventsTestsConsumer.png)
+[TestRunResult](/TestRunResult.png)
 
 
 ## Задание 4
@@ -351,6 +330,9 @@ minikube tunnel
 https://cinemaabyss.example.com/api/movies
 и приложите скриншот развертывания helm и вывода https://cinemaabyss.example.com/api/movies
 
+[HelmDeploy](/HelmDeploy.png)
+[Helm_MoviesResponse](/Helm_MoviesResponse.png)
+
 
 # Задание 5
 Компания планирует активно развиваться и для повышения надежности, безопасности, реализации сетевых паттернов типа Circuit Breaker и канареечного деплоя вам как архитектору необходимо развернуть istio и настроить circuit breaker для monolith и movies сервисов.
@@ -416,6 +398,9 @@ You can see 21 for the upstream_rq_pending_overflow value which means 21 calls s
 ```
 
 Приложите скриншот работы circuit breaker'а
+
+[circuitbreaker](/circuitbreaker.png)
+[circuitbreaker_movies](/circuitbreaker_movies.png)
 
 Удаляем все
 ```bash

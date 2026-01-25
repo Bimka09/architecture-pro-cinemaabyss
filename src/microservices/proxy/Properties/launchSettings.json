@@ -25,7 +25,12 @@
       "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "MONOLITH_URL": "http://localhost:8080",
+        "MOVIES_SERVICE_URL": "http://localhost:8081",
+        "EVENTS_SERVICE_URL": "http://localhost:8082",
+        "GRADUAL_MIGRATION": "true",
+        "MOVIES_MIGRATION_PERCENT": "50"
       }
     },
     "Container (Dockerfile)": {

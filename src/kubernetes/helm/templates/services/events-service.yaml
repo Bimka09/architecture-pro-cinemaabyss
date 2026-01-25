@@ -25,7 +25,41 @@ spec:
     spec:
       containers:
       - name: events-service
-       .... тут
+        image: ghcr.io/bimka09/architecture-pro-cinemaabyss/events-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: {{ .Values.eventsService.service.targetPort }}
+        env:
+        - name: ASPNETCORE_HTTP_PORTS
+          value: "{{ .Values.eventsService.service.targetPort }}"
+        - name: KAFKA_BROKERS
+          value: "kafka:9092"
+        {{- range $i, $topic := .Values.kafka.topics }}
+        - name: "KAFKA_TOPIC_{{ $topic.name | upper | replace "-" "_" }}"
+          value: "{{ $topic.name }}"
+        {{- end }}
+        envFrom:
+        - configMapRef:
+            name: cinemaabyss-config
+        - secretRef:
+            name: cinemaabyss-secrets
+        resources:
+          {{- toYaml .Values.eventsService.resources | nindent 10 }}
+        readinessProbe:
+          httpGet:
+            path: /api/events/health
+            port: {{ .Values.eventsService.service.targetPort }}
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /api/events/health
+            port: {{ .Values.eventsService.service.targetPort }}
+          initialDelaySeconds: 15
+          periodSeconds: 20
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: dockerconfigjson
 ---
 apiVersion: v1
 kind: Service
@@ -37,5 +71,10 @@ metadata:
     app.kubernetes.io/name: {{ include "cinemaabyss.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
- ........ и тут
+  selector:
+    app: events-service
+  ports:
+  - port: {{ .Values.eventsService.service.port }}
+    targetPort: {{ .Values.eventsService.service.targetPort }}
+  type: {{ .Values.eventsService.service.type }}
 {{- end }}
